@@ -1,0 +1,9 @@
+Per Altra family erratum, PCIE_65 may cause invalid addresses to be generated
+on PCIe mmio writes, impacting certain device types, notably AMD GPUs, and thus
+the Altra family is not generally compatible with those device types. We have
+provided a proof-of-concept software patch under the GPL v2 that will allow
+experimental and development work to proceed.  PER THE TERMS OF THAT LICENSE
+AND AS A REMINDER, NO WARRANTIES OR SUPPORT IS PROVIDED.
+
+The patches for a particular kernel version are located in the directory with
+that version's name.
