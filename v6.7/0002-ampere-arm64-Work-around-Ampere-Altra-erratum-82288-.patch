@@ -163,11 +163,10 @@ diff --git a/drivers/pci/quirks.c b/drivers/pci/quirks.c
 index a2bf6de11462f..fe615fb9f4d43 100644
 --- a/drivers/pci/quirks.c
 +++ b/drivers/pci/quirks.c
-@@ -6243,3 +6243,12 @@ static void pci_fixup_d3cold_delay_1sec(struct pci_dev *pdev)
- 	pdev->d3cold_delay = 1000;
- }
- DECLARE_PCI_FIXUP_FINAL(0x5555, 0x0004, pci_fixup_d3cold_delay_1sec);
-+
+@@ -6212,6 +6212,15 @@ DECLARE_PCI_FIXUP_FINAL(PCI_VENDOR_ID_XILINX, 0x5020, of_pci_make_dev_node);
+ DECLARE_PCI_FIXUP_FINAL(PCI_VENDOR_ID_XILINX, 0x5021, of_pci_make_dev_node);
+ DECLARE_PCI_FIXUP_FINAL(PCI_VENDOR_ID_REDHAT, 0x0005, of_pci_make_dev_node);
+ 
 +#ifdef CONFIG_ALTRA_ERRATUM_82288
 +static void quirk_altra_erratum_82288(struct pci_dev *dev)
 +{
@@ -176,6 +175,10 @@ index a2bf6de11462f..fe615fb9f4d43 100644
 +}
 +DECLARE_PCI_FIXUP_EARLY(PCI_VENDOR_ID_AMPERE, 0xe100, quirk_altra_erratum_82288);
 +#endif
++
+ /*
+  * Devices known to require a longer delay before first config space access
+  * after reset recovery or resume from D3cold:
 -- 
 2.43.0
 
