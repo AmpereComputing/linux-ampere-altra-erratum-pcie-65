@@ -107,7 +107,7 @@ index 79ce70fbb751c..5c26ee4aa7572 100644
 +{
 +#ifdef CONFIG_ALTRA_ERRATUM_82288
 +	phys_addr_t phys = __pte_to_phys(pte);
-+	pgprot_t prot = __pgprot(pte_val(pte) & ~PTE_ADDR_MASK);
++	pgprot_t prot = __pgprot(pte_val(pte) & ~__phys_to_pte_val(__pte_to_phys(__pte(~0ull))));
 +
 +	if (static_branch_unlikely(&have_altra_erratum_82288) &&
 +	    (phys < 0x80000000 ||
