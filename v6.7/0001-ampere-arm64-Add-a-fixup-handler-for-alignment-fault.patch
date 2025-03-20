@@ -191,7 +191,7 @@ index 0000000000000..dd5028398a4c8
 +	addr &= ~(sz - 1);
 +	if (is_ttbr0_addr(addr)) {
 +		for (; sz; sz--) {
-+			if (align_store(addr, 1, 0))
++			if (align_store(addr++, 1, 0))
 +				return 1;
 +		}
 +	} else
