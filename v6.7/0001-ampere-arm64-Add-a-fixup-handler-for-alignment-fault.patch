@@ -63,7 +63,7 @@ new file mode 100644
 index 0000000000000..dd5028398a4c8
 --- /dev/null
 +++ b/arch/arm64/kernel/alignment.c
-@@ -0,0 +1,1049 @@
+@@ -0,0 +1,1050 @@
 +// SPDX-License-Identifier: GPL-2.0-only
 +/*
 + * Copyright (C) 2023 Ampere Computing LLC
@@ -519,6 +519,7 @@ index 0000000000000..dd5028398a4c8
 +			else
 +				data = sign_extend64(data, datasize - 1);
 +		}
++		pt_regs_write_reg(regs, t, data);
 +	}
 +
 +	return 0;
