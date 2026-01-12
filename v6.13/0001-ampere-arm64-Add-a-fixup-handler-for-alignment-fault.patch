@@ -28,9 +28,9 @@ Signed-off-by: D Scott Phillips <scott@os.amperecomputing.com>
 ---
  arch/arm64/include/asm/exception.h |    1 +
  arch/arm64/kernel/Makefile         |    5 +-
- arch/arm64/kernel/alignment.c      | 1050 ++++++++++++++++++++++++++++
+ arch/arm64/kernel/alignment.c      | 1044 ++++++++++++++++++++++++++++
  arch/arm64/mm/fault.c              |    5 +-
- 4 files changed, 1058 insertions(+), 3 deletions(-)
+ 4 files changed, 1052 insertions(+), 3 deletions(-)
  create mode 100644 arch/arm64/kernel/alignment.c
 
 diff --git a/arch/arm64/include/asm/exception.h b/arch/arm64/include/asm/exception.h
@@ -67,7 +67,7 @@ new file mode 100644
 index 0000000000000..1cc1c98b62776
 --- /dev/null
 +++ b/arch/arm64/kernel/alignment.c
-@@ -0,0 +1,1050 @@
+@@ -0,0 +1,1044 @@
 +// SPDX-License-Identifier: GPL-2.0-only
 +/*
 + * Copyright (C) 2023 Ampere Computing LLC
@@ -497,9 +497,6 @@ index 0000000000000..1cc1c98b62776
 +
 +	datasize = 8 << scale;
 +
-+	if (n == t && n != 31)
-+		return 1;
-+
 +	offset = pt_regs_read_reg(regs, m);
 +	if (extend_len == 32) {
 +		offset &= (u32)~0;
@@ -558,9 +555,6 @@ index 0000000000000..1cc1c98b62776
 +		return 1;
 +
 +	datasize = 8 << scale;
-+
-+	if (n == t && n != 31)
-+		return 1;
 +
 +	offset = pt_regs_read_reg(regs, m);
 +	if (extend_len == 32) {
@@ -656,7 +650,7 @@ index 0000000000000..1cc1c98b62776
 +
 +	datasize = 8 << scale;
 +
-+	if (n == t && n != 31)
++	if (wback && n == t && n != 31)
 +		return 1;
 +
 +	address = regs_get_register(regs, n << 3);
