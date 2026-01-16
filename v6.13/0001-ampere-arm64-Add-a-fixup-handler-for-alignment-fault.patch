@@ -17,7 +17,6 @@ Unsupported instructions are:
  * Load/store exclusive
  * LDAPR/STLR (unscaled immediate)
  * Load register (literal) [cannot Alignment fault]
- * Load/store register (unprivileged)
  * Atomic memory operations
  * Load/store register (pac)
 
@@ -28,9 +27,9 @@ Signed-off-by: D Scott Phillips <scott@os.amperecomputing.com>
 ---
  arch/arm64/include/asm/exception.h |    1 +
  arch/arm64/kernel/Makefile         |    5 +-
- arch/arm64/kernel/alignment.c      | 1044 ++++++++++++++++++++++++++++
+ arch/arm64/kernel/alignment.c      | 1120 ++++++++++++++++++++++++++++
  arch/arm64/mm/fault.c              |    5 +-
- 4 files changed, 1052 insertions(+), 3 deletions(-)
+ 4 files changed, 1128 insertions(+), 3 deletions(-)
  create mode 100644 arch/arm64/kernel/alignment.c
 
 diff --git a/arch/arm64/include/asm/exception.h b/arch/arm64/include/asm/exception.h
@@ -67,7 +66,7 @@ new file mode 100644
 index 0000000000000..1cc1c98b62776
 --- /dev/null
 +++ b/arch/arm64/kernel/alignment.c
-@@ -0,0 +1,1044 @@
+@@ -0,0 +1,1120 @@
 +// SPDX-License-Identifier: GPL-2.0-only
 +/*
 + * Copyright (C) 2023 Ampere Computing LLC
@@ -989,6 +988,72 @@ index 0000000000000..1cc1c98b62776
 +	return 0;
 +}
 +
++static int align_ldst_unpriv(u32 insn, struct pt_regs *regs)
++{
++	const u32 SIZE = GENMASK(31, 30);
++	const u32 OPC = GENMASK(23, 22);
++
++	u32 size = FIELD_GET(SIZE, insn);
++	u32 opc = FIELD_GET(OPC, insn);
++
++	int scale = size;
++	u64 uoffset = aarch64_insn_decode_immediate(AARCH64_INSN_IMM_9, insn);
++	u64 offset = sign_extend64(uoffset, 8);
++
++	int n = aarch64_insn_decode_register(AARCH64_INSN_REGTYPE_RN, insn);
++	int t = aarch64_insn_decode_register(AARCH64_INSN_REGTYPE_RT, insn);
++
++	bool is_store;
++	bool is_signed;
++	int regsize;
++	int datasize;
++	u64 address;
++	u64 data;
++
++	if ((opc & 0x2) == 0) {
++		is_store = (opc & 0x1) != 0x1;
++		regsize = size == 0x3 ? 64 : 32;
++		is_signed = false;
++	} else {
++		if (size == 0x3)
++			return 1;
++		is_store = false;
++		if (size == 2 && (opc & 0x1) == 0x1)
++			return 1;
++		regsize = (opc & 0x1) == 0x1 ? 32 : 64;
++		is_signed = true;
++	}
++
++	datasize = 8 << scale;
++
++	address = regs_get_register(regs, n << 3);
++
++	address += offset;
++
++	if (!is_ttbr0_addr(address))
++		return 1;
++
++	if (is_store) {
++		data = pt_regs_read_reg(regs, t);
++		if (align_store(address, datasize / 8, data))
++			return is_ttbr1_addr(regs->pc) &&
++				fixup_exception(regs) ? 0 : 1;
++	} else {
++		if (align_load(address, datasize / 8, &data))
++			return is_ttbr1_addr(regs->pc) &&
++				fixup_exception(regs) ? 0 : 1;
++		if (is_signed) {
++			if (regsize == 32)
++				data = sign_extend32(data, datasize - 1);
++			else
++				data = sign_extend64(data, datasize - 1);
++		}
++		pt_regs_write_reg(regs, t, data);
++	}
++
++	return 0;
++}
++
 +static int align_ldst(u32 insn, struct pt_regs *regs)
 +{
 +	const u32 op0 = FIELD_GET(GENMASK(31, 28), insn);
@@ -1074,6 +1139,16 @@ index 0000000000000..1cc1c98b62776
 +		 * |------+-----+-----+--------+-----+-------------------------------------------|
 +		 */
 +		return align_ldst_vector_single(insn, regs);
++	} else if ((op0 & 0x3) == 0x3 && (op2 & 0x2) == 0 &&
++		   (op3 & 0x20) == 0 && op4 == 2) {
++		/*
++		 * |------+-----+-----+--------+-----+------------------------------------|
++		 * | op0  | op1 | op2 |    op3 | op4 |                                    |
++		 * |------+-----+-----+--------+-----+------------------------------------|
++		 * | xx11 |   - |  0x | 0xxxxx |  10 | Load/store register (unprivileged) |
++		 * |------+-----+-----+--------+-----+------------------------------------|
++		 */
++		return align_ldst_unpriv(insn, regs);
 +	} else
 +		return 1;
 +}
