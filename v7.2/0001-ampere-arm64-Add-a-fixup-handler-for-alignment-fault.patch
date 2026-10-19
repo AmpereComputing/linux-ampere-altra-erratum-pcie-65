@@ -1,4 +1,4 @@
-From 30fe4465615fdba2b26025c51cc25cc1aa96e1d3 Mon Sep 17 00:00:00 2001
+From 1a4d96873b63d15b1a8104deef3b91420614b513 Mon Sep 17 00:00:00 2001
 From: D Scott Phillips <scott@os.amperecomputing.com>
 Date: Tue, 13 Feb 2024 09:01:07 -0800
 Subject: [PATCH 1/2] ampere/arm64: Add a fixup handler for alignment faults in
@@ -26,10 +26,10 @@ ASL specifications.
 Signed-off-by: D Scott Phillips <scott@os.amperecomputing.com>
 ---
  arch/arm64/include/asm/exception.h |    1 +
- arch/arm64/kernel/Makefile         |    5 +-
+ arch/arm64/kernel/Makefile         |    4 +
  arch/arm64/kernel/alignment.c      | 1120 ++++++++++++++++++++++++++++
  arch/arm64/mm/fault.c              |    5 +-
- 4 files changed, 1128 insertions(+), 3 deletions(-)
+ 4 files changed, 1128 insertions(+), 2 deletions(-)
  create mode 100644 arch/arm64/kernel/alignment.c
 
 diff --git a/arch/arm64/include/asm/exception.h b/arch/arm64/include/asm/exception.h
@@ -45,22 +45,27 @@ index a2da3cb21c24..c9a6c3d2f68e 100644
  void do_el0_svc(struct pt_regs *regs);
  void do_el0_svc_compat(struct pt_regs *regs);
 diff --git a/arch/arm64/kernel/Makefile b/arch/arm64/kernel/Makefile
-index d2690c3ec528..d6294a638153 100644
+index d2690c3ec528..a469e6c5857d 100644
 --- a/arch/arm64/kernel/Makefile
 +++ b/arch/arm64/kernel/Makefile
-@@ -25,8 +25,11 @@ KASAN_SANITIZE_stacktrace.o := n
- KCOV_INSTRUMENT_entry-common.o := n
- KCOV_INSTRUMENT_idle.o := n
+@@ -14,6 +14,9 @@ CFLAGS_REMOVE_return_address.o = $(CC_FLAGS_FTRACE)
+ CFLAGS_REMOVE_syscall.o	 = -fstack-protector -fstack-protector-strong
+ CFLAGS_syscall.o	+= -fno-stack-protector
  
 +CFLAGS_alignment.o		+= $(CC_FLAGS_FPU)
 +CFLAGS_REMOVE_alignment.o	+= $(CC_FLAGS_NO_FPU)
 +
- # Object file lists.
--obj-y			:= debug-monitors.o entry.o irq.o fpsimd.o		\
-+obj-y			:= alignment.o debug-monitors.o entry.o irq.o fpsimd.o	\
- 			   entry-common.o process.o ptrace.o			\
- 			   setup.o signal.o sys.o stacktrace.o time.o traps.o	\
- 			   io.o vdso.o hyp-stub.o psci.o cpu_ops.o		\
+ # When KASAN is enabled, a stack trace is recorded for every alloc/free, which
+ # can significantly impact performance. Avoid instrumenting the stack trace
+ # collection code to minimize this impact.
+@@ -39,6 +42,7 @@ obj-y			:= debug-monitors.o entry.o irq.o fpsimd.o		\
+ obj-$(CONFIG_COMPAT)			+= sys32.o signal32.o			\
+ 					   sys_compat.o
+ obj-$(CONFIG_COMPAT)			+= sigreturn32.o
++obj-y					+= alignment.o
+ obj-$(CONFIG_COMPAT_ALIGNMENT_FIXUPS)	+= compat_alignment.o
+ obj-$(CONFIG_KUSER_HELPERS)		+= kuser32.o
+ obj-$(CONFIG_FUNCTION_TRACER)		+= ftrace.o entry-ftrace.o
 diff --git a/arch/arm64/kernel/alignment.c b/arch/arm64/kernel/alignment.c
 new file mode 100644
 index 000000000000..9e4e8d61f8ce
@@ -1204,5 +1209,5 @@ index 0b52557652be..6a6cc1b5127c 100644
  	do_bad_area(far, esr, regs);
  	return 0;
 -- 
-2.55.0
+2.56.0
 
